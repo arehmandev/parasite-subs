@@ -1,25 +1,29 @@
+from datetime import datetime, timedelta
 
 sub_data_file = open("parasite_subs.srt")
 sub_data = sub_data_file.read()
 sub_data_file.close()
 
-time_modifier = -2
-new_file = "parasite_time_modified_subs.srt"
+timestamp_format = "%H:%M:%S,%f"
+time_modifier_s = -2
+time_modifier_ms = 0
+
+new_file_name = "parasite_time_modified_subs.srt"
 
 
-def modify_stamp(timestamp_list, position, time_modifier):
-    timestamp_s = str(
-        int(timestamp_list[position].split(",")[0]) + time_modifier)
+def modify_stamp(timestamp_input, position=2):
 
-    timestamp_ms = timestamp_list[position].split(",")[1]
+    parsed_timestamp = datetime.strptime(
+        timestamp_input+"000", timestamp_format)
+    parsed_timestamp = parsed_timestamp + \
+        timedelta(seconds=time_modifier_s, milliseconds=time_modifier_ms)
 
-    if int(timestamp_s) < 10:
-        timestamp_s = "0" + str(timestamp_s)
+    corrected_timestamp = parsed_timestamp.strftime(
+        timestamp_format)[:-3]
+    return corrected_timestamp
 
-    timestamp_list[position] = timestamp_s + "," + timestamp_ms
 
-
-def main(new_file):
+def main():
     new_data = []
 
     for line in sub_data.split("\n\n"):
@@ -27,12 +31,17 @@ def main(new_file):
         if len(line) < 4:
             continue
 
-        current_timestamp_list = line.split("\n")[1].split(":")
+        current_timestamp_list = line.split("\n")[1]
+        left_timestamp = current_timestamp_list.split(
+            " --> ")[0]
+        right_timestamp = current_timestamp_list.split(
+            " --> ")[1]
 
-        modify_stamp(current_timestamp_list, 2, time_modifier)
-        modify_stamp(current_timestamp_list, 4, time_modifier)
+        final_new_stamp = "{} --> {}".format(
+            modify_stamp(left_timestamp),
+            modify_stamp(right_timestamp)
+        )
 
-        final_new_stamp = ":".join(current_timestamp_list)
         final_line = line.split("\n")
         final_line[1] = final_new_stamp
         final_line_string = "\n".join(final_line)
@@ -40,9 +49,9 @@ def main(new_file):
         new_data.append(final_line_string)
 
     new_file_data = "\n\n".join(new_data)
-    new_file = open(new_file, "w")
+    new_file = open(new_file_name, "w")
     new_file.write(new_file_data)
     new_file.close()
 
 
-main(new_file)
+main()
